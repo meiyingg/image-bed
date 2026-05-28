@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>图床管理 - Image Bed</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="header-content">
+                <h1>📸 Image Bed</h1>
+                <p>快速便捷的图片托管服务</p>
+                <button class="btn-settings" id="settingsBtn" title="GitHub设置">⚙️ 设置</button>
+            </div>
+        </header>
+
+        <!-- GitHub Settings Modal -->
+        <div id="settingsModal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <button class="modal-close" id="closeSettings">&times;</button>
+                <h2>GitHub 配置</h2>
+                <p class="settings-tip">配置你的 GitHub 账户以保存图片到 GitHub Pages</p>
+                
+                <form id="settingsForm">
+                    <div class="form-group">
+                        <label for="githubUsername">GitHub 用户名：</label>
+                        <input type="text" id="githubUsername" placeholder="例：meiying" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="githubRepo">仓库名称：</label>
+                        <input type="text" id="githubRepo" placeholder="例：image-bed（使用 GitHub Pages 仓库）" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="githubToken">Personal Access Token：</label>
+                        <input type="password" id="githubToken" placeholder="粘贴你的 token（只需 contents 权限）" required>
+                        <small>
+                            <a href="https://github.com/settings/tokens" target="_blank">📖 如何获取 Token?</a>
+                            选择 "Personal access tokens (classic)" 或 "Fine-grained tokens"，勾选 repo 权限即可
+                        </small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="githubBranch">分支：</label>
+                        <input type="text" id="githubBranch" placeholder="例：main" value="main">
+                    </div>
+
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="rememberConfig">
+                            记住此配置（保存在本地存储）
+                        </label>
+                    </div>
+
+                    <button type="submit" class="btn-save">✅ 保存配置</button>
+                </form>
+
+                <div id="statusMessage" class="status-message" style="display: none;"></div>
+            </div>
+        </div>
+
+        <main class="main-content">
+            <!-- Upload Section -->
+            <section class="upload-section">
+                <div id="githubStatus" class="github-status">
+                    <span id="statusIcon">❌</span>
+                    <span id="statusText">未配置 GitHub</span>
+                </div>
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-icon">📤</div>
+                    <h2>拖拽上传图片</h2>
+                    <p>或点击选择文件</p>
+                    <input type="file" id="fileInput" multiple accept="image/*" style="display: none;">
+                </div>
+                <button class="upload-btn" id="uploadBtn">选择图片</button>
+            </section>
+
+            <!-- Upload Progress -->
+            <div id="progressContainer" class="progress-container" style="display: none;">
+                <div class="progress-item">
+                    <p id="progressText">上传中...</p>
+                    <div class="progress-bar">
+                        <div id="progressFill" class="progress-fill"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Images Gallery -->
+            <section class="gallery-section">
+                <div class="section-header">
+                    <h2>图片库</h2>
+                    <div class="header-actions">
+                        <input type="text" id="searchInput" class="search-box" placeholder="搜索图片...">
+                        <select id="sortSelect" class="sort-select">
+                            <option value="recent">最新上传</option>
+                            <option value="name">名称排序</option>
+                            <option value="size">文件大小</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="gallery" class="gallery-grid"></div>
+                <div id="emptyState" class="empty-state">
+                    <p>📭 还没有上传任何图片</p>
+                </div>
+            </section>
+        </main>
+
+        <!-- Image Preview Modal -->
+        <div id="previewModal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <button class="modal-close" id="closeModal">&times;</button>
+                <img id="previewImage" src="" alt="Preview">
+                <div class="modal-info">
+                    <p><strong>文件名：</strong><span id="imageName"></span></p>
+                    <p id="imageUrl" style="display: none;"><strong>GitHub URL：</strong><span id="imageUrlValue"></span></p>
+                    <div class="modal-actions">
+                        <button class="btn-copy" id="copyMarkdown">📋 复制Markdown</button>
+                        <button class="btn-copy" id="copyUrl">🔗 复制链接</button>
+                        <button class="btn-copy" id="openGithub" style="display: none;">🌐 在GitHub打开</button>
+                        <button class="btn-delete" id="deleteImage">🗑️ 删除</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>

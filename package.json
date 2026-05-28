@@ -1,0 +1,27 @@
+{
+  "name": "image-bed",
+  "version": "1.0.0",
+  "description": "A lightweight image hosting service built with GitHub Pages",
+  "main": "index.html",
+  "scripts": {
+    "start": "python -m http.server 8000",
+    "dev": "python -m http.server 8000",
+    "serve": "npx serve"
+  },
+  "keywords": [
+    "image",
+    "bed",
+    "github-pages",
+    "image-hosting",
+    "github"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/image-bed.git"
+  },
+  "devDependencies": {
+    "serve": "^14.0.0"
+  }
+}
