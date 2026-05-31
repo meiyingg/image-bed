@@ -1,9 +1,8 @@
-class FileBed {
+class ImageBed {
     constructor() {
-        // Backward compatible with the old "image bed" storage keys so existing uploads survive.
-        this.files = JSON.parse(localStorage.getItem('imageBed_images')) || [];
+        this.images = JSON.parse(localStorage.getItem('imageBed_images')) || [];
         this.githubConfig = JSON.parse(localStorage.getItem('imageBed_github')) || {};
-
+        
         this.uploadArea = document.getElementById('uploadArea');
         this.fileInput = document.getElementById('fileInput');
         this.uploadBtn = document.getElementById('uploadBtn');
@@ -18,7 +17,7 @@ class FileBed {
         this.settingsModal = document.getElementById('settingsModal');
         this.closeSettings = document.getElementById('closeSettings');
         this.settingsForm = document.getElementById('settingsForm');
-
+        
         this.initEventListeners();
         this.updateGithubStatus();
         this.renderGallery();
@@ -82,11 +81,11 @@ class FileBed {
             return;
         }
 
-        this.githubConfig = { username, repo, token, branch };
         if (remember) {
+            this.githubConfig = { username, repo, token, branch };
             localStorage.setItem('imageBed_github', JSON.stringify(this.githubConfig));
         } else {
-            localStorage.removeItem('imageBed_github');
+            this.githubConfig = { username, repo, token, branch };
         }
 
         this.updateGithubStatus();
@@ -128,7 +127,8 @@ class FileBed {
     handleDrop(e) {
         e.preventDefault();
         this.uploadArea.classList.remove('drag-over');
-        this.processFiles(e.dataTransfer.files);
+        const files = e.dataTransfer.files;
+        this.processFiles(files);
     }
 
     handleFileSelect(e) {
@@ -136,51 +136,47 @@ class FileBed {
         e.target.value = '';
     }
 
-    processFiles(fileList) {
-        const files = Array.from(fileList);
-
-        if (files.length === 0) {
-            alert('请选择要上传的文件');
+    processFiles(files) {
+        const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
+        
+        if (imageFiles.length === 0) {
+            alert('请选择有效的图片文件');
             return;
         }
 
         if (this.githubConfig.username) {
-            this.uploadToGithub(files);
+            // Upload to GitHub
+            this.uploadToGithub(imageFiles);
         } else {
-            this.uploadLocal(files);
+            // Local only
+            this.uploadLocal(imageFiles);
         }
     }
 
-    isImage(file) {
-        // `file` may be a File object (has .type) or a stored item.
-        return (file.type || '').startsWith('image/');
-    }
-
-    uploadLocal(files) {
+    uploadLocal(imageFiles) {
         this.progressContainer.style.display = 'block';
         let uploadedCount = 0;
 
-        files.forEach((file) => {
+        imageFiles.forEach((file) => {
             const reader = new FileReader();
             reader.onload = (e) => {
                 uploadedCount++;
-                this.files.unshift({
+                this.images.unshift({
                     id: this.generateId(),
                     name: file.name,
                     src: e.target.result,
                     size: file.size,
                     timestamp: new Date().getTime(),
                     type: file.type,
-                    isImage: this.isImage(file),
                     isLocal: true
                 });
 
-                const progress = Math.round((uploadedCount / files.length) * 100);
+                const progress = Math.round((uploadedCount / imageFiles.length) * 100);
                 document.getElementById('progressFill').style.width = progress + '%';
                 document.getElementById('progressText').textContent = `上传进度: ${progress}%`;
 
-                if (uploadedCount === files.length) {
-                    this.saveFiles();
+                if (uploadedCount === imageFiles.length) {
+                    this.saveImages();
                     this.renderGallery();
                     setTimeout(() => {
                         this.progressContainer.style.display = 'none';
@@ -192,30 +188,28 @@ class FileBed {
         });
     }
 
-    async uploadToGithub(files) {
+    async uploadToGithub(imageFiles) {
         this.progressContainer.style.display = 'block';
         let uploadedCount = 0;
 
-        for (const file of files) {
+        for (const file of imageFiles) {
             try {
                 document.getElementById('progressText').textContent = `上传中: ${file.name}...`;
-                const { githubUrl, path } = await this.uploadFileToGithub(file);
-
+                const githubUrl = await this.uploadFileToGithub(file);
+                
                 uploadedCount++;
-                this.files.unshift({
+                this.images.unshift({
                     id: this.generateId(),
                     name: file.name,
-                    src: this.isImage(file) ? githubUrl : '',
+                    src: githubUrl,
                     githubUrl: githubUrl,
-                    path: path,
                     size: file.size,
                     timestamp: new Date().getTime(),
                     type: file.type,
-                    isImage: this.isImage(file),
                     isLocal: false
                 });
 
-                const progress = Math.round((uploadedCount / files.length) * 100);
+                const progress = Math.round((uploadedCount / imageFiles.length) * 100);
                 document.getElementById('progressFill').style.width = progress + '%';
                 document.getElementById('progressText').textContent = `上传进度: ${progress}%`;
             } catch (error) {
@@ -225,7 +219,7 @@ class FileBed {
         }
 
         if (uploadedCount > 0) {
-            this.saveFiles();
+            this.saveImages();
             this.renderGallery();
         }
 
@@ -238,20 +232,21 @@ class FileBed {
     async uploadFileToGithub(file) {
         const { username, repo, token, branch } = this.githubConfig;
         const timestamp = new Date().getTime();
-        // Sanitize the name and keep images under images/, everything else under files/.
-        const safeName = file.name.replace(/[^\w.\-]+/g, '_');
-        const dir = this.isImage(file) ? 'images' : 'files';
-        const filename = `${timestamp}_${safeName}`;
-        const path = `${dir}/${filename}`;
+        const filename = `${timestamp}_${file.name}`;
+        const path = `images/${filename}`;
 
-        // Convert file to base64 (strip the data URL prefix).
+        // Convert file to base64
         const base64Content = await new Promise((resolve, reject) => {
             const reader = new FileReader();
-            reader.onload = () => resolve(reader.result.split(',')[1]);
+            reader.onload = () => {
+                const base64 = reader.result.split(',')[1];
+                resolve(base64);
+            };
             reader.onerror = reject;
             reader.readAsDataURL(file);
         });
 
+        // Upload to GitHub via API
         const url = `https://api.github.com/repos/${username}/${repo}/contents/${path}`;
         const response = await fetch(url, {
             method: 'PUT',
@@ -271,69 +266,31 @@ class FileBed {
             throw new Error(error.message || `HTTP ${response.status}`);
         }
 
+        // Generate GitHub Pages URL
         const githubUrl = `https://${username}.github.io/${repo}/${path}`;
-        return { githubUrl, path };
+        return githubUrl;
     }
 
     generateId() {
         return Date.now().toString(36) + Math.random().toString(36).substr(2);
     }
 
-    saveFiles() {
-        try {
-            localStorage.setItem('imageBed_images', JSON.stringify(this.files));
-        } catch (err) {
-            console.error('保存到本地存储失败:', err);
-            alert('本地存储空间不足，无法保存文件预览数据。配置 GitHub 后上传可避免该问题。');
-        }
+    saveImages() {
+        localStorage.setItem('imageBed_images', JSON.stringify(this.images));
     }
 
-    // Pick an emoji icon for a non-image file based on extension / mime type.
-    getFileIcon(item) {
-        const name = (item.name || '').toLowerCase();
-        const ext = name.includes('.') ? name.split('.').pop() : '';
-        const type = item.type || '';
+    getFilteredImages() {
+        let filtered = this.images;
 
-        const byExt = {
-            pdf: '📕',
-            doc: '📘', docx: '📘',
-            xls: '📗', xlsx: '📗', csv: '📗',
-            ppt: '📙', pptx: '📙',
-            zip: '🗜️', rar: '🗜️', '7z': '🗜️', gz: '🗜️', tar: '🗜️',
-            txt: '📄', md: '📝', rtf: '📄',
-            mp3: '🎵', wav: '🎵', flac: '🎵', m4a: '🎵',
-            mp4: '🎬', mov: '🎬', avi: '🎬', mkv: '🎬', webm: '🎬',
-            js: '💻', ts: '💻', py: '💻', java: '💻', c: '💻', cpp: '💻',
-            html: '💻', css: '💻', json: '💻', xml: '💻', sh: '💻',
-        };
-
-        if (byExt[ext]) return byExt[ext];
-        if (type.startsWith('video/')) return '🎬';
-        if (type.startsWith('audio/')) return '🎵';
-        if (type.startsWith('text/')) return '📄';
-        return '📦';
-    }
-
-    formatSize(bytes) {
-        if (!bytes && bytes !== 0) return '未知';
-        const units = ['B', 'KB', 'MB', 'GB'];
-        let size = bytes;
-        let i = 0;
-        while (size >= 1024 && i < units.length - 1) {
-            size /= 1024;
-            i++;
-        }
-        return `${size.toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
-    }
-
-    getFilteredFiles() {
-        let filtered = this.files;
-
+        // Search
         const searchTerm = this.searchInput.value.toLowerCase();
         if (searchTerm) {
-            filtered = filtered.filter(f => f.name.toLowerCase().includes(searchTerm));
+            filtered = filtered.filter(img => 
+                img.name.toLowerCase().includes(searchTerm)
+            );
         }
 
+        // Sort
         const sortBy = this.sortSelect.value;
         switch (sortBy) {
             case 'name':
@@ -351,9 +308,9 @@ class FileBed {
     }
 
     renderGallery() {
-        const files = this.getFilteredFiles();
-
-        if (files.length === 0) {
+        const images = this.getFilteredImages();
+        
+        if (images.length === 0) {
             this.gallery.style.display = 'none';
             this.emptyState.style.display = 'block';
             return;
@@ -363,32 +320,27 @@ class FileBed {
         this.emptyState.style.display = 'none';
         this.gallery.innerHTML = '';
 
-        files.forEach(file => {
+        images.forEach(image => {
             const item = document.createElement('div');
             item.className = 'gallery-item';
-
-            const preview = (file.isImage && file.src)
-                ? `<img src="${file.src}" alt="${file.name}">`
-                : `<div class="file-card">
-                       <div class="file-card-icon">${this.getFileIcon(file)}</div>
-                       <div class="file-card-name">${file.name}</div>
-                   </div>`;
-
             item.innerHTML = `
-                ${preview}
+                <img src="${image.src}" alt="${image.name}">
                 <div class="gallery-overlay">
                     <div class="overlay-actions">
-                        <button class="overlay-btn" data-id="${file.id}" data-action="preview" title="预览">👁️</button>
-                        <button class="overlay-btn" data-id="${file.id}" data-action="copy" title="复制链接">📋</button>
-                        <button class="overlay-btn" data-id="${file.id}" data-action="delete" title="删除">🗑️</button>
+                        <button class="overlay-btn" data-id="${image.id}" data-action="preview" title="预览">👁️</button>
+                        <button class="overlay-btn" data-id="${image.id}" data-action="copy" title="复制链接">📋</button>
+                        <button class="overlay-btn" data-id="${image.id}" data-action="delete" title="删除">🗑️</button>
                     </div>
                 </div>
             `;
 
-            item.querySelectorAll('.overlay-btn').forEach(btn => {
+            const buttons = item.querySelectorAll('.overlay-btn');
+            buttons.forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    this.handleFileAction(btn.dataset.id, btn.dataset.action);
+                    const action = btn.dataset.action;
+                    const imageId = btn.dataset.id;
+                    this.handleImageAction(imageId, action);
                 });
             });
 
@@ -396,62 +348,42 @@ class FileBed {
         });
     }
 
-    handleFileAction(fileId, action) {
-        const file = this.files.find(f => f.id === fileId);
-        if (!file) return;
+    handleImageAction(imageId, action) {
+        const image = this.images.find(img => img.id === imageId);
+        if (!image) return;
 
         switch (action) {
             case 'preview':
-                this.showPreview(file);
+                this.showPreview(image);
                 break;
             case 'copy':
-                this.copyFileUrl(file);
+                this.copyImageUrl(image);
                 break;
             case 'delete':
-                this.deleteFile(fileId);
+                this.deleteImage(imageId);
                 break;
         }
     }
 
-    showPreview(file) {
-        const img = document.getElementById('previewImage');
-        const iconBox = document.getElementById('previewFileIcon');
-
-        if (file.isImage && file.src) {
-            img.src = file.src;
-            img.style.display = 'block';
-            iconBox.style.display = 'none';
+    showPreview(image) {
+        document.getElementById('previewImage').src = image.src;
+        document.getElementById('imageName').textContent = image.name;
+        
+        // Show GitHub URL if available
+        if (image.githubUrl) {
+            document.getElementById('imageUrl').style.display = 'block';
+            document.getElementById('imageUrlValue').textContent = image.githubUrl;
+            document.getElementById('openGithub').style.display = 'inline-block';
+            document.getElementById('openGithub').onclick = () => window.open(image.githubUrl, '_blank');
         } else {
-            img.style.display = 'none';
-            iconBox.textContent = this.getFileIcon(file);
-            iconBox.style.display = 'flex';
+            document.getElementById('imageUrl').style.display = 'none';
+            document.getElementById('openGithub').style.display = 'none';
         }
-
-        document.getElementById('fileName').textContent = file.name;
-        document.getElementById('fileType').textContent = file.type || '未知';
-        document.getElementById('fileSize').textContent = this.formatSize(file.size);
-
-        const openBtn = document.getElementById('openFile');
-        if (file.githubUrl) {
-            document.getElementById('fileUrl').style.display = 'block';
-            document.getElementById('fileUrlValue').textContent = file.githubUrl;
-            openBtn.style.display = 'inline-block';
-            openBtn.onclick = () => window.open(file.githubUrl, '_blank');
-        } else {
-            document.getElementById('fileUrl').style.display = 'none';
-            // Local non-github files can still be opened/downloaded via their data URL.
-            if (file.src) {
-                openBtn.style.display = 'inline-block';
-                openBtn.onclick = () => window.open(file.src, '_blank');
-            } else {
-                openBtn.style.display = 'none';
-            }
-        }
-
-        document.getElementById('copyMarkdown').onclick = () => this.copyMarkdownLink(file);
-        document.getElementById('copyUrl').onclick = () => this.copyFileUrl(file);
-        document.getElementById('deleteFile').onclick = () => {
-            this.deleteFile(file.id);
+        
+        document.getElementById('copyMarkdown').onclick = () => this.copyMarkdownLink(image);
+        document.getElementById('copyUrl').onclick = () => this.copyImageUrl(image);
+        document.getElementById('deleteImage').onclick = () => {
+            this.deleteImage(image.id);
             this.closePreviewModal();
         };
 
@@ -462,22 +394,14 @@ class FileBed {
         this.previewModal.style.display = 'none';
     }
 
-    copyMarkdownLink(file) {
-        const url = file.githubUrl || file.src;
-        // Images embed with ![], other files link with [].
-        const markdown = file.isImage
-            ? `![${file.name}](${url})`
-            : `[${file.name}](${url})`;
+    copyMarkdownLink(image) {
+        const markdown = `![${image.name}](${image.src})`;
         this.copyToClipboard(markdown, 'Markdown链接已复制！');
     }
 
-    copyFileUrl(file) {
-        const url = file.githubUrl || file.src;
-        if (!url) {
-            alert('该文件没有可复制的链接');
-            return;
-        }
-        this.copyToClipboard(url, '文件链接已复制！');
+    copyImageUrl(image) {
+        const url = image.githubUrl || image.src;
+        this.copyToClipboard(url, '图片链接已复制！');
     }
 
     copyToClipboard(text, message) {
@@ -489,16 +413,16 @@ class FileBed {
         });
     }
 
-    deleteFile(fileId) {
-        if (!confirm('确定要删除这个文件吗？（仅从本列表移除，不会删除 GitHub 上的文件）')) return;
-
-        this.files = this.files.filter(f => f.id !== fileId);
-        this.saveFiles();
+    deleteImage(imageId) {
+        if (!confirm('确定要删除这张图片吗？')) return;
+        
+        this.images = this.images.filter(img => img.id !== imageId);
+        this.saveImages();
         this.renderGallery();
     }
 }
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
-    new FileBed();
+    new ImageBed();
 });

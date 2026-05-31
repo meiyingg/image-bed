@@ -3,15 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>文件床 - File Bed</title>
+    <title>图床管理 - Image Bed</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
     <div class="container">
         <header class="header">
             <div class="header-content">
-                <h1>📦 File Bed</h1>
-                <p>快速便捷的文件托管服务（图片 / PDF / 文档 / 任意文件）</p>
+                <h1>📸 Image Bed</h1>
+                <p>快速便捷的图片托管服务</p>
                 <button class="btn-settings" id="settingsBtn" title="GitHub设置">⚙️ 设置</button>
             </div>
         </header>
@@ -21,19 +21,19 @@
             <div class="modal-content">
                 <button class="modal-close" id="closeSettings">&times;</button>
                 <h2>GitHub 配置</h2>
-                <p class="settings-tip">配置你的 GitHub 账户以保存文件到 GitHub Pages</p>
-
+                <p class="settings-tip">配置你的 GitHub 账户以保存图片到 GitHub Pages</p>
+                
                 <form id="settingsForm">
                     <div class="form-group">
                         <label for="githubUsername">GitHub 用户名：</label>
                         <input type="text" id="githubUsername" placeholder="例：meiying" required>
                     </div>
-
+                    
                     <div class="form-group">
                         <label for="githubRepo">仓库名称：</label>
                         <input type="text" id="githubRepo" placeholder="例：image-bed（使用 GitHub Pages 仓库）" required>
                     </div>
-
+                    
                     <div class="form-group">
                         <label for="githubToken">Personal Access Token：</label>
                         <input type="password" id="githubToken" placeholder="粘贴你的 token（只需 contents 权限）" required>
@@ -71,11 +71,11 @@
                 </div>
                 <div class="upload-area" id="uploadArea">
                     <div class="upload-icon">📤</div>
-                    <h2>拖拽上传文件</h2>
-                    <p>或点击选择文件 · 支持任意类型</p>
-                    <input type="file" id="fileInput" multiple style="display: none;">
+                    <h2>拖拽上传图片</h2>
+                    <p>或点击选择文件</p>
+                    <input type="file" id="fileInput" multiple accept="image/*" style="display: none;">
                 </div>
-                <button class="upload-btn" id="uploadBtn">选择文件</button>
+                <button class="upload-btn" id="uploadBtn">选择图片</button>
             </section>
 
             <!-- Upload Progress -->
@@ -88,12 +88,12 @@
                 </div>
             </div>
 
-            <!-- Files Gallery -->
+            <!-- Images Gallery -->
             <section class="gallery-section">
                 <div class="section-header">
-                    <h2>文件库</h2>
+                    <h2>图片库</h2>
                     <div class="header-actions">
-                        <input type="text" id="searchInput" class="search-box" placeholder="搜索文件...">
+                        <input type="text" id="searchInput" class="search-box" placeholder="搜索图片...">
                         <select id="sortSelect" class="sort-select">
                             <option value="recent">最新上传</option>
                             <option value="name">名称排序</option>
@@ -103,29 +103,24 @@
                 </div>
                 <div id="gallery" class="gallery-grid"></div>
                 <div id="emptyState" class="empty-state">
-                    <p>📭 还没有上传任何文件</p>
+                    <p>📭 还没有上传任何图片</p>
                 </div>
             </section>
         </main>
 
-        <!-- File Preview Modal -->
+        <!-- Image Preview Modal -->
         <div id="previewModal" class="modal" style="display: none;">
             <div class="modal-content">
                 <button class="modal-close" id="closeModal">&times;</button>
-                <div id="previewBody" class="preview-body">
-                    <img id="previewImage" src="" alt="Preview" style="display: none;">
-                    <div id="previewFileIcon" class="preview-file-icon" style="display: none;"></div>
-                </div>
+                <img id="previewImage" src="" alt="Preview">
                 <div class="modal-info">
-                    <p><strong>文件名：</strong><span id="fileName"></span></p>
-                    <p><strong>类型：</strong><span id="fileType"></span></p>
-                    <p><strong>大小：</strong><span id="fileSize"></span></p>
-                    <p id="fileUrl" style="display: none;"><strong>GitHub URL：</strong><span id="fileUrlValue"></span></p>
+                    <p><strong>文件名：</strong><span id="imageName"></span></p>
+                    <p id="imageUrl" style="display: none;"><strong>GitHub URL：</strong><span id="imageUrlValue"></span></p>
                     <div class="modal-actions">
                         <button class="btn-copy" id="copyMarkdown">📋 复制Markdown</button>
                         <button class="btn-copy" id="copyUrl">🔗 复制链接</button>
-                        <button class="btn-copy" id="openFile" style="display: none;">🌐 打开/下载</button>
-                        <button class="btn-delete" id="deleteFile">🗑️ 删除</button>
+                        <button class="btn-copy" id="openGithub" style="display: none;">🌐 在GitHub打开</button>
+                        <button class="btn-delete" id="deleteImage">🗑️ 删除</button>
                     </div>
                 </div>
             </div>
