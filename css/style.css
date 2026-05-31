@@ -273,6 +273,36 @@ body {
     object-fit: cover;
 }
 
+/* Non-image files render as an icon card instead of a thumbnail. */
+.file-card {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px;
+    box-sizing: border-box;
+    background-color: var(--bg-light);
+}
+
+.file-card-icon {
+    font-size: 3em;
+    line-height: 1;
+}
+
+.file-card-name {
+    font-size: 0.78em;
+    color: var(--text-secondary);
+    text-align: center;
+    word-break: break-all;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
 .gallery-overlay {
     position: absolute;
     top: 0;
@@ -393,6 +423,18 @@ body {
     width: 100%;
     border-radius: 8px;
     margin-bottom: 20px;
+}
+
+.preview-file-icon {
+    width: 100%;
+    height: 180px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 5em;
+    background-color: var(--bg-light);
 }
 
 .modal-info p {
